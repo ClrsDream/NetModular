@@ -1,16 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NetModular.Lib.Auth.Abstractions;
-using NetModular.Lib.Auth.Web;
 using NetModular.Lib.Auth.Web.Attributes;
-using NetModular.Lib.Module.AspNetCore.Attributes;
-using NetModular.Lib.Utils.Core.Extensions;
-using NetModular.Lib.Utils.Core.Result;
 using NetModular.Module.Admin.Application.AccountService;
 using NetModular.Module.Admin.Application.AccountService.ViewModels;
 using NetModular.Module.Admin.Domain.Account.Models;
@@ -18,82 +12,22 @@ using NetModular.Module.Admin.Domain.Account.Models;
 namespace NetModular.Module.Admin.Web.Controllers
 {
     [Description("账户管理")]
-    public class AccountController : ModuleController
+    public class AccountController : Web.ModuleController
     {
         private readonly ILoginInfo _loginInfo;
         private readonly IAccountService _service;
-        private readonly ILoginHandler _loginHandler;
-        public AccountController(IAccountService accountService, ILoginHandler loginHandler, ILoginInfo loginInfo)
+
+        public AccountController(IAccountService accountService, ILoginInfo loginInfo)
         {
             _service = accountService;
-            _loginHandler = loginHandler;
             _loginInfo = loginInfo;
         }
 
         [HttpGet]
-        [AllowAnonymous]
-        [DisableAuditing]
-        [Description("获取验证码")]
-        public IResultModel VerifyCode(int length = 6)
-        {
-            return _service.CreateVerifyCode(length);
-        }
-
-        [HttpPost]
-        [AllowAnonymous]
-        [DisableAuditing]
-        [Description("登录")]
-        public async Task<IResultModel> Login([FromBody]LoginModel model)
-        {
-            model.IP = _loginInfo.IPv4;
-            var result = await _service.Login(model);
-            if (result.Successful)
-            {
-                var account = result.Data;
-                var claims = new[]
-                {
-                    new Claim(ClaimsName.AccountId,account.Id.ToString()),
-                    new Claim(ClaimsName.AccountName,account.Name),
-                    new Claim(ClaimsName.AccountType,model.AccountType.ToInt().ToString()),
-                    new Claim(ClaimsName.Platform,model.Platform.ToInt().ToString())
-                };
-
-                return _loginHandler.Hand(claims);
-            }
-
-            return ResultModel.Failed(result.Msg);
-        }
-
-        [HttpGet]
-        [DisableAuditing]
-        [Common]
-        [Description("获取账户登录信息")]
-        public Task<IResultModel> LoginInfo()
-        {
-            return _service.LoginInfo(_loginInfo.AccountId);
-        }
-
-        [HttpPost]
-        [Description("修改密码")]
-        [Common]
-        public Task<IResultModel> UpdatePassword(UpdatePasswordModel model)
-        {
-            model.AccountId = _loginInfo.AccountId;
-            return _service.UpdatePassword(model);
-        }
-
-        [HttpPost]
-        [Description("绑定角色")]
-        public Task<IResultModel> BindRole(AccountRoleBindModel model)
-        {
-            return _service.BindRole(model);
-        }
-
-        [HttpGet]
         [Description("查询")]
-        public async Task<IResultModel> Query([FromQuery]AccountQueryModel model)
+        public Task<IResultModel> Query([FromQuery]AccountQueryModel model)
         {
-            return await _service.Query(model);
+            return _service.Query(model);
         }
 
         [HttpPost]
@@ -125,6 +59,22 @@ namespace NetModular.Module.Admin.Web.Controllers
         }
 
         [HttpPost]
+        [Description("修改密码")]
+        [Common]
+        public Task<IResultModel> UpdatePassword(UpdatePasswordModel model)
+        {
+            model.AccountId = _loginInfo.AccountId;
+            return _service.UpdatePassword(model);
+        }
+
+        [HttpPost]
+        [Description("绑定角色")]
+        public Task<IResultModel> BindRole(AccountRoleBindModel model)
+        {
+            return _service.BindRole(model);
+        }
+
+        [HttpPost]
         [Description("重置密码")]
         public Task<IResultModel> ResetPassword([BindRequired]Guid id)
         {
@@ -137,6 +87,13 @@ namespace NetModular.Module.Admin.Web.Controllers
         public Task<IResultModel> SkinUpdate(AccountSkinUpdateModel model)
         {
             return _service.SkinUpdate(_loginInfo.AccountId, model);
+        }
+
+        [HttpPost]
+        [Description("激活账户")]
+        public Task<IResultModel> Active([BindRequired]Guid id)
+        {
+            return _service.Active(id);
         }
     }
 }

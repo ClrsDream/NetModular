@@ -1,4 +1,5 @@
 ﻿using System;
+using NetModular.Lib.Data.Abstractions.Options;
 
 namespace NetModular.Lib.Data.Abstractions.Entities
 {
@@ -7,6 +8,26 @@ namespace NetModular.Lib.Data.Abstractions.Entities
     /// </summary>
     public interface IEntityDescriptor
     {
+        /// <summary>
+        /// 数据库上下文
+        /// </summary>
+        IDbContext DbContext { get; }
+
+        /// <summary>
+        /// 数据集
+        /// </summary>
+        IDbSet DbSet { get; set; }
+
+        /// <summary>
+        /// 数据库配置信息
+        /// </summary>
+        DbModuleOptions DbOptions { get; }
+
+        /// <summary>
+        /// 数据库名称
+        /// </summary>
+        string Database { get; }
+
         /// <summary>
         /// 模块名称
         /// </summary>
@@ -56,5 +77,10 @@ namespace NetModular.Lib.Data.Abstractions.Entities
         /// 是否是EntityBase类型实体
         /// </summary>
         bool IsEntityBase { get; }
+
+        /// <summary>
+        /// 是否是多租户模式
+        /// </summary>
+        bool IsTenant { get; }
     }
 }

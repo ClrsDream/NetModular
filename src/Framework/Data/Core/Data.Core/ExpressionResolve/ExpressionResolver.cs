@@ -8,7 +8,6 @@ using System.Text;
 using NetModular.Lib.Data.Abstractions;
 using NetModular.Lib.Data.Abstractions.Enums;
 using NetModular.Lib.Data.Core.SqlQueryable.Internal;
-using NetModular.Lib.Utils.Core.Extensions;
 
 namespace NetModular.Lib.Data.Core.ExpressionResolve
 {
@@ -19,6 +18,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
         private LambdaExpression _fullExpression;
         private IQueryParameters _parameters;
         private StringBuilder _sqlBuilder;
+        private bool _isResolveUpdate = false;
 
         public ExpressionResolver(ISqlAdapter sqlAdapter, QueryBody queryBody)
         {
@@ -26,11 +26,12 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
             _queryBody = queryBody;
         }
 
-        public string Resolve(LambdaExpression expression, IQueryParameters parameters)
+        public string Resolve(LambdaExpression expression, IQueryParameters parameters, bool isResolveUpdate = false)
         {
             if (expression == null)
                 return string.Empty;
 
+            _isResolveUpdate = isResolveUpdate;
             _fullExpression = expression;
             _parameters = parameters;
             _sqlBuilder = new StringBuilder();
@@ -139,6 +140,18 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                 case ExpressionType.NotEqual:
                     _sqlBuilder.Append(" <> ");
                     break;
+                case ExpressionType.Add:
+                    _sqlBuilder.Append(" + ");
+                    break;
+                case ExpressionType.Subtract:
+                    _sqlBuilder.Append(" - ");
+                    break;
+                case ExpressionType.Multiply:
+                    _sqlBuilder.Append(" * ");
+                    break;
+                case ExpressionType.Divide:
+                    _sqlBuilder.Append(" / ");
+                    break;
             }
 
             Resolve(binaryExp.Right);
@@ -172,8 +185,15 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                     DynamicInvokeResolve(exp);
                     return;
                 }
+
                 if (memberExp.Expression.NodeType == ExpressionType.MemberAccess)
                 {
+                    if (memberExp.Expression is MemberExpression subMemberExp && subMemberExp.Expression.NodeType == ExpressionType.Constant)
+                    {
+                        DynamicInvokeResolve(exp);
+                        return;
+                    }
+
                     //分组查询
                     if (_queryBody.IsGroupBy)
                     {
@@ -185,19 +205,16 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             return;
                         }
                     }
-                    else
+                    else if (memberExp.Expression.Type.IsString())
                     {
-                        if (memberExp.Expression.Type == typeof(string))
+                        switch (memberExp.Member.Name)
                         {
-                            var memberName = memberExp.Member.Name;
-                            //解析Length函数
-                            if (memberName.Equals("Length"))
-                            {
+                            case "Length":
+                                //解析Length函数
                                 var funcName = _sqlAdapter.FuncLength;
                                 var colName = _queryBody.GetColumnName(memberExp.Expression as MemberExpression, _fullExpression);
                                 _sqlBuilder.AppendFormat("{0}({1})", funcName, colName);
                                 return;
-                            }
                         }
                     }
                 }
@@ -218,7 +235,6 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
         private void DynamicInvokeResolve(Expression exp)
         {
             var value = DynamicInvoke(exp);
-
             AppendValue(value);
         }
 
@@ -382,11 +398,11 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(string))
+                    else if (valueType.IsString())
                     {
                         list = value as List<string>;
                     }
-                    else if (valueType == typeof(Guid))
+                    else if (valueType.IsGuid())
                     {
                         if (value is List<Guid> valueList)
                         {
@@ -396,7 +412,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(char))
+                    else if (valueType.IsChar())
                     {
                         if (value is List<char> valueList)
                         {
@@ -406,7 +422,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(DateTime))
+                    else if (valueType.IsDateTime())
                     {
                         if (value is List<DateTime> valueList)
                         {
@@ -416,7 +432,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(int))
+                    else if (valueType.IsInt())
                     {
                         isValueType = true;
                         if (value is List<int> valueList)
@@ -427,7 +443,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(long))
+                    else if (valueType.IsLong())
                     {
                         isValueType = true;
                         if (value is List<long> valueList)
@@ -438,7 +454,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(double))
+                    else if (valueType.IsDouble())
                     {
                         isValueType = true;
                         if (value is List<double> valueList)
@@ -449,7 +465,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(float))
+                    else if (valueType.IsFloat())
                     {
                         isValueType = true;
                         if (value is List<float> valueList)
@@ -460,7 +476,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                             }
                         }
                     }
-                    else if (valueType == typeof(decimal))
+                    else if (valueType.IsDecimal())
                     {
                         isValueType = true;
                         if (value is List<decimal> valueList)
@@ -532,7 +548,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(string))
+                        else if (valueType.IsString())
                         {
                             if (value is string[] valueList)
                             {
@@ -542,7 +558,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(Guid))
+                        else if (valueType.IsGuid())
                         {
                             if (value is Guid[] valueList)
                             {
@@ -552,7 +568,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(char))
+                        else if (valueType.IsChar())
                         {
                             if (value is char[] valueList)
                             {
@@ -562,7 +578,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(DateTime))
+                        else if (valueType.IsDateTime())
                         {
                             if (value is DateTime[] valueList)
                             {
@@ -572,7 +588,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(byte))
+                        else if (valueType.IsByte())
                         {
                             isValueType = true;
                             if (value is byte[] valueList)
@@ -583,7 +599,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(int))
+                        else if (valueType.IsInt())
                         {
                             isValueType = true;
                             if (value is int[] valueList)
@@ -594,7 +610,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(long))
+                        else if (valueType.IsLong())
                         {
                             isValueType = true;
                             if (value is long[] valueList)
@@ -605,7 +621,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(double))
+                        else if (valueType.IsDouble())
                         {
                             isValueType = true;
                             if (value is double[] valueList)
@@ -616,7 +632,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(short))
+                        else if (valueType.IsShort())
                         {
                             isValueType = true;
                             if (value is short[] valueList)
@@ -627,7 +643,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(float))
+                        else if (valueType.IsFloat())
                         {
                             isValueType = true;
                             if (value is float[] valueList)
@@ -638,7 +654,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                                 }
                             }
                         }
-                        else if (valueType == typeof(decimal))
+                        else if (valueType.IsDecimal())
                         {
                             isValueType = true;
                             if (value is decimal[] valueList)
@@ -777,7 +793,7 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
                         else
                             _sqlBuilder.Append(_sqlAdapter.AppendQuote(col.Name));
 
-                        _sqlBuilder.Append("=");
+                        _sqlBuilder.Append(" = ");
 
                         Resolve(assignment.Expression);
 
@@ -794,24 +810,27 @@ namespace NetModular.Lib.Data.Core.ExpressionResolve
             if (exp.Type.IsEnum)
                 return result.ToInt();
 
-            return result ?? "";
+            return result;
         }
 
         private void AppendValue(object value)
         {
-            if (value == null)
+            if (value == null && !_isResolveUpdate)
             {
                 var len = _sqlBuilder.Length;
                 if (_sqlBuilder[len - 1] == ' ' && _sqlBuilder[len - 2] == '>' && _sqlBuilder[len - 3] == '<')
                 {
                     _sqlBuilder.Remove(len - 3, 3);
                     _sqlBuilder.Append("IS NOT NULL");
+                    return;
                 }
-                else if (_sqlBuilder[len - 1] == ' ' && _sqlBuilder[len - 2] == '=')
+
+                if (_sqlBuilder[len - 1] == ' ' && _sqlBuilder[len - 2] == '=')
                 {
                     _sqlBuilder.Remove(len - 2, 2);
                     _sqlBuilder.Append("IS NULL");
                 }
+
                 return;
             }
 

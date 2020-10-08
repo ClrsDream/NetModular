@@ -8,7 +8,7 @@
         /// <summary>
         /// 租户编号
         /// </summary>
-        public const string TenantId = "tid";
+        public const string TenantId = "td";
 
         /// <summary>
         /// 账户编号
@@ -29,5 +29,10 @@
         /// 平台类型
         /// </summary>
         public const string Platform = "pf";
+
+        /// <summary>
+        /// 登录时间
+        /// </summary>
+        public const string LoginTime = "lt";
     }
 }

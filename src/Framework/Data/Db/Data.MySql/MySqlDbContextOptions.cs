@@ -4,8 +4,6 @@ using MySql.Data.MySqlClient;
 using NetModular.Lib.Auth.Abstractions;
 using NetModular.Lib.Data.Abstractions.Options;
 using NetModular.Lib.Data.Core;
-using NetModular.Lib.Utils.Core;
-using NetModular.Lib.Utils.Core.Extensions;
 
 namespace NetModular.Lib.Data.MySql
 {
@@ -21,7 +19,7 @@ namespace NetModular.Lib.Data.MySql
         /// <param name="options"></param>
         /// <param name="loggerFactory"></param>
         /// <param name="loginInfo"></param>
-        public MySqlDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new MySqlAdapter(dbOptions, options), loggerFactory, loginInfo)
+        public MySqlDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new MySqlAdapter(dbOptions, options, loggerFactory), loggerFactory, loginInfo)
         {
             if (options.ConnectionString.IsNull())
             {
@@ -33,13 +31,16 @@ namespace NetModular.Lib.Data.MySql
                 var connStrBuilder = new MySqlConnectionStringBuilder
                 {
                     Server = DbOptions.Server,
-                    Port = DbOptions.Port > 0 ? (uint) DbOptions.Port : 3306,
+                    Port = DbOptions.Port > 0 ? (uint)DbOptions.Port : 3306,
                     Database = options.Database,
                     UserID = DbOptions.UserId,
                     Password = DbOptions.Password,
                     AllowUserVariables = true,
                     CharacterSet = "utf8",
-                    SslMode = MySqlSslMode.None
+                    SslMode = MySqlSslMode.None,
+                    AllowPublicKeyRetrieval = true,
+                    MinimumPoolSize = dbOptions.MinPoolSize < 1 ? 0u : dbOptions.MinPoolSize.ToByte(),
+                    MaximumPoolSize = dbOptions.MaxPoolSize < 1 ? 10u : dbOptions.MaxPoolSize.ToByte()
                 };
                 options.ConnectionString = connStrBuilder.ToString();
             }

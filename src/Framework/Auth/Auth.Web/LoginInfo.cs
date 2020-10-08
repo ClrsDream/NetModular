@@ -1,13 +1,14 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
 using NetModular.Lib.Auth.Abstractions;
-using NetModular.Lib.Utils.Core.Extensions;
+using NetModular.Lib.Utils.Core.Attributes;
 
 namespace NetModular.Lib.Auth.Web
 {
     /// <summary>
     /// 登录信息
     /// </summary>
+    [Singleton]
     public class LoginInfo : ILoginInfo
     {
         private readonly IHttpContextAccessor _contextAccessor;
@@ -17,21 +18,18 @@ namespace NetModular.Lib.Auth.Web
             _contextAccessor = contextAccessor;
         }
 
-        /// <summary>
-        /// 租户编号
-        /// </summary>
-        public Guid TenantId
+        public Guid? TenantId
         {
             get
             {
-                var accountId = _contextAccessor?.HttpContext?.User?.FindFirst(ClaimsName.TenantId);
+                var tenantId = _contextAccessor?.HttpContext?.User?.FindFirst(ClaimsName.TenantId);
 
-                if (accountId != null && accountId.Value.NotNull())
+                if (tenantId != null && tenantId.Value.NotNull())
                 {
-                    return new Guid(accountId.Value);
+                    return new Guid(tenantId.Value);
                 }
 
-                return Guid.Empty;
+                return null;
             }
         }
 
@@ -139,6 +137,38 @@ namespace NetModular.Lib.Auth.Web
                     return "";
 
                 return _contextAccessor.HttpContext.Connection.RemoteIpAddress.MapToIPv6().ToString();
+            }
+        }
+
+        /// <summary>
+        /// 登录时间
+        /// </summary>
+        public long LoginTime
+        {
+            get
+            {
+                var ty = _contextAccessor?.HttpContext?.User?.FindFirst(ClaimsName.LoginTime);
+
+                if (ty != null && ty.Value.NotNull())
+                {
+                    return ty.Value.ToLong();
+                }
+
+                return 0L;
+            }
+        }
+
+        /// <summary>
+        /// User-Agent
+        /// </summary>
+        public string UserAgent
+        {
+            get
+            {
+                if (_contextAccessor?.HttpContext?.Request == null)
+                    return "";
+
+                return _contextAccessor.HttpContext.Request.Headers["User-Agent"];
             }
         }
     }

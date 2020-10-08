@@ -4,8 +4,6 @@ using Microsoft.Extensions.Logging;
 using NetModular.Lib.Auth.Abstractions;
 using NetModular.Lib.Data.Abstractions.Options;
 using NetModular.Lib.Data.Core;
-using NetModular.Lib.Utils.Core;
-using NetModular.Lib.Utils.Core.Extensions;
 
 namespace NetModular.Lib.Data.SqlServer
 {
@@ -14,7 +12,7 @@ namespace NetModular.Lib.Data.SqlServer
     /// </summary>
     public class SqlServerDbContextOptions : DbContextOptionsAbstract
     {
-        public SqlServerDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new SqlServerAdapter(dbOptions, options), loggerFactory, loginInfo)
+        public SqlServerDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new SqlServerAdapter(dbOptions, options, loggerFactory), loggerFactory, loginInfo)
         {
             if (options.ConnectionString.IsNull())
             {
@@ -29,7 +27,9 @@ namespace NetModular.Lib.Data.SqlServer
                     UserID = DbOptions.UserId,
                     Password = DbOptions.Password,
                     MultipleActiveResultSets = true,
-                    InitialCatalog = DbModuleOptions.Database
+                    InitialCatalog = DbModuleOptions.Database,
+                    MaxPoolSize = dbOptions.MaxPoolSize < 1 ? 100 : dbOptions.MaxPoolSize,
+                    MinPoolSize = dbOptions.MinPoolSize < 1 ? 0 : dbOptions.MinPoolSize
                 };
                 options.ConnectionString = connStrBuilder.ToString();
             }

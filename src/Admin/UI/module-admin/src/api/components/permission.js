@@ -5,20 +5,21 @@ export default name => {
   const crud = $http.crud(root)
 
   const urls = {
-    controllers: root + 'Controllers',
-    actions: root + 'Actions',
-    sync: root + 'sync'
+    tree: root + 'Tree',
+    queryByCodes: root + 'QueryByCodes'
   }
 
-  /**
-   * @description 同步
-   */
-  const sync = () => {
-    return $http.post(urls.sync)
+  const tree = () => {
+    return $http.get(urls.tree)
+  }
+
+  const queryByCodes = codes => {
+    return $http.get(urls.queryByCodes, { codes })
   }
 
   return {
     ...crud,
-    sync
+    tree,
+    queryByCodes
   }
 }

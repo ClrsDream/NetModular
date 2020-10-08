@@ -9,6 +9,9 @@ namespace NetModular.Lib.Data.Core.Entities
     /// <typeparam name="TKey"></typeparam>
     public class Entity<TKey> : IEntity
     {
+        /// <summary>
+        /// 主键
+        /// </summary>
         public virtual TKey Id { get; set; }
     }
 

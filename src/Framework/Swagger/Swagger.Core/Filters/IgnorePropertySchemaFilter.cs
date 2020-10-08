@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
-using NetModular.Lib.Swagger.Abstractions.Attributes;
+using NetModular.Lib.Utils.Core.Attributes;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace NetModular.Lib.Swagger.Core.Filters
@@ -14,8 +14,8 @@ namespace NetModular.Lib.Swagger.Core.Filters
             {
                 return;
             }
-
-            var ignoreProperties = context.ApiModel.Type.GetProperties().Where(t => t.GetCustomAttribute<IgnorePropertyAttribute>() != null);
+            
+            var ignoreProperties = context.Type.GetProperties().Where(t => t.GetCustomAttribute<IgnorePropertyAttribute>() != null);
 
             foreach (var ignorePropertyInfo in ignoreProperties)
             {
@@ -26,7 +26,6 @@ namespace NetModular.Lib.Swagger.Core.Filters
                     schema.Properties.Remove(propertyToRemove);
                 }
             }
-
         }
     }
 }

@@ -10,7 +10,7 @@ namespace NetModular.Lib.Auth.Abstractions
         /// <summary>
         /// 租户编号
         /// </summary>
-        Guid TenantId { get; }
+        Guid? TenantId { get; }
 
         /// <summary>
         /// 账户编号
@@ -46,5 +46,15 @@ namespace NetModular.Lib.Auth.Abstractions
         /// 获取当前用户IPv6
         /// </summary>
         string IPv6 { get; }
+
+        /// <summary>
+        /// 登录时间戳
+        /// </summary>
+        long LoginTime { get; }
+
+        /// <summary>
+        /// 获取当前用户请求的User-Agent
+        /// </summary>
+        string UserAgent { get; }
     }
 }

@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using NetModular.Lib.Config.Abstractions;
 using NetModular.Lib.Data.Abstractions;
-using NetModular.Module.Admin.Domain.Config.Models;
 
 namespace NetModular.Module.Admin.Domain.Config
 {
@@ -11,38 +10,11 @@ namespace NetModular.Module.Admin.Domain.Config
     public interface IConfigRepository : IRepository<ConfigEntity>
     {
         /// <summary>
-        /// 验证键值是否存在
+        /// 获取
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="type"></param>
+        /// <param name="code"></param>
         /// <returns></returns>
-        Task<bool> Exists(string key);
-
-        /// <summary>
-        /// 数据项是否存在
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        Task<bool> Exists(ConfigEntity entity);
-
-        /// <summary>
-        /// 根据前缀查询配置项列表
-        /// </summary>
-        /// <param name="prefix"></param>
-        /// <returns></returns>
-        Task<IList<ConfigEntity>> QueryByPrefix(string prefix);
-
-        /// <summary>
-        /// 查询
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        Task<IList<ConfigEntity>> Query(ConfigQueryModel model);
-
-        /// <summary>
-        /// 根据Key获取对象
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<ConfigEntity> GetByKey(string key);
+        Task<ConfigEntity> Get(ConfigType type, string code);
     }
 }

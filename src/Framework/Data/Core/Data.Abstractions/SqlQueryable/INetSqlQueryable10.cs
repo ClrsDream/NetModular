@@ -94,10 +94,25 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         /// <summary>
         /// 过滤
         /// </summary>
+        /// <param name="whereSql">过滤条件</param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> Where(string whereSql);
+
+        /// <summary>
+        /// 过滤
+        /// </summary>
         /// <param name="condition">添加条件</param>
         /// <param name="expression">条件</param>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereIf(bool condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> expression);
+
+        /// <summary>
+        /// 过滤
+        /// </summary>
+        /// <param name="condition">添加条件</param>
+        /// <param name="whereSql">条件</param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereIf(bool condition, string whereSql);
 
         /// <summary>
         /// 过滤
@@ -109,12 +124,29 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereIf(bool condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> ifExpression, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> elseExpression);
 
         /// <summary>
+        /// 过滤
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="ifWhereSql"></param>
+        /// <param name="elseWhereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereIf(bool condition, string ifWhereSql, string elseWhereSql);
+
+        /// <summary>
         /// 字符串不为Null以及空字符串的时候添加过滤
         /// </summary>
         /// <param name="condition"></param>
         /// <param name="expression"></param>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(string condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> expression);
+
+        /// <summary>
+        /// 字符串不为Null以及空字符串的时候添加过滤
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="whereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(string condition, string whereSql);
 
         /// <summary>
         /// 字符串不为Null以及空字符串的时候添加ifExpression，反之添加elseExpression
@@ -126,12 +158,29 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(string condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> ifExpression, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> elseExpression);
 
         /// <summary>
+        /// 字符串不为Null以及空字符串的时候添加ifExpression，反之添加elseExpression
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="ifWhereSql"></param>
+        /// <param name="elseWhereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(string condition, string ifWhereSql, string elseWhereSql);
+
+        /// <summary>
         /// 不为Null以及Empty的时候添加过滤
         /// </summary>
         /// <param name="condition"></param>
         /// <param name="expression"></param>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(object condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> expression);
+
+        /// <summary>
+        /// 不为Null以及Empty的时候添加过滤
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="whereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(object condition, string whereSql);
 
         /// <summary>
         /// 不为Null以及Empty的时候添加ifExpression，反之添加elseExpression
@@ -143,12 +192,29 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(object condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> ifExpression, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> elseExpression);
 
         /// <summary>
+        /// 不为Null以及Empty的时候添加ifExpression，反之添加elseExpression
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="ifWhereSql"></param>
+        /// <param name="elseWhereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotNull(object condition, string ifWhereSql, string elseWhereSql);
+
+        /// <summary>
         /// GUID不为空的时候添加过滤条件
         /// </summary>
         /// <param name="condition"></param>
         /// <param name="expression"></param>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotEmpty(Guid condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> expression);
+
+        /// <summary>
+        /// GUID不为空的时候添加过滤条件
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="whereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotEmpty(Guid condition, string whereSql);
 
         /// <summary>
         /// GUID不为空的时候添加ifExpression，反之添加elseExpression
@@ -158,6 +224,34 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         /// <param name="elseExpression"></param>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotEmpty(Guid condition, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> ifExpression, Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, bool>> elseExpression);
+
+        /// <summary>
+        /// GUID不为空的时候添加ifExpression，反之添加elseExpression
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="ifWhereSql"></param>
+        /// <param name="elseWhereSql"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotEmpty(Guid condition, string ifWhereSql, string elseWhereSql);
+
+        /// <summary>
+        /// NotIn查询
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="list"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> WhereNotIn<TKey>(Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, TKey>> key, IEnumerable<TKey> list);
+
+        /// <summary>
+        /// 子查询
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="key">列</param>
+        /// <param name="queryOperator">运算逻辑</param>
+        /// <param name="queryable">子查询的查询构造器</param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> Where<TKey>(Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, TKey>> key, QueryOperator queryOperator, INetSqlQueryable queryable);
 
         #endregion
 
@@ -180,6 +274,14 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         /// </summary>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> Select<TResult>(Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, TResult>> selectExpression);
+
+        /// <summary>
+        /// 查询排除指定列
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> SelectExclude<TResult>(Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, TResult>> expression);
 
         #endregion
 
@@ -271,6 +373,12 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         /// <returns></returns>
         IGroupByQueryable10<TResult, TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> GroupBy<TResult>(Expression<Func<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10, TResult>> expression);
 
+        /// <summary>
+        /// 分组(group by 1)
+        /// </summary>
+        /// <returns></returns>
+        IGroupByQueryable10<INetSqlGroupingKey10<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10>, TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> GroupBy();
+
         #endregion
 
         #region ==ToList==
@@ -330,6 +438,27 @@ namespace NetModular.Lib.Data.Abstractions.SqlQueryable
         /// </summary>
         /// <returns></returns>
         INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> IncludeDeleted();
+
+        #endregion
+
+
+        #region ==NotFilterTenant==
+
+        /// <summary>
+        /// 不过滤租户
+        /// </summary>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> NotFilterTenant();
+
+        #endregion
+
+        #region ==Copy==
+
+        /// <summary>
+        /// 复制一个新的实例
+        /// </summary>
+        /// <returns></returns>
+        INetSqlQueryable<TEntity, TEntity2, TEntity3, TEntity4, TEntity5, TEntity6, TEntity7, TEntity8, TEntity9, TEntity10> Copy();
 
         #endregion
     }

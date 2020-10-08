@@ -1,11 +1,8 @@
 ﻿using System.Data;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using NetModular.Lib.Auth.Abstractions;
 using NetModular.Lib.Data.Abstractions.Options;
 using NetModular.Lib.Data.Core;
-using NetModular.Lib.Utils.Core;
-using NetModular.Lib.Utils.Core.Extensions;
 using Npgsql;
 
 namespace NetModular.Lib.Data.PostgreSQL
@@ -22,7 +19,7 @@ namespace NetModular.Lib.Data.PostgreSQL
         /// <param name="options"></param>
         /// <param name="loggerFactory"></param>
         /// <param name="loginInfo"></param>
-        public PostgreSQLDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new PostgreSQLAdapter(dbOptions, options), loggerFactory, loginInfo)
+        public PostgreSQLDbContextOptions(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory, ILoginInfo loginInfo) : base(dbOptions, options, new PostgreSQLAdapter(dbOptions, options, loggerFactory), loggerFactory, loginInfo)
         {
             if (options.ConnectionString.IsNull())
             {

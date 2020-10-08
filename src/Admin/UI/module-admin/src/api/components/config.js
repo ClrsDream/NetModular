@@ -2,17 +2,33 @@ import module from '../../module'
 
 export default name => {
   const root = `${module.code}/${name}/`
-  const crud = $http.crud(root)
   const urls = {
-    getValue: root + 'GetValue'
+    ui: root + 'UI',
+    edit: root + 'Edit',
+    update: root + 'Update',
+    descriptors: root + 'Descriptors'
   }
 
-  const getValue = key => {
-    return $http.get(urls.getValue, { key })
+  const getUI = () => {
+    return $http.get(urls.ui)
+  }
+
+  const edit = params => {
+    return $http.get(urls.edit, params)
+  }
+
+  const update = params => {
+    return $http.post(urls.update, params)
+  }
+
+  const getDescriptors = () => {
+    return $http.get(urls.descriptors)
   }
 
   return {
-    ...crud,
-    getValue
+    getUI,
+    edit,
+    update,
+    getDescriptors
   }
 }

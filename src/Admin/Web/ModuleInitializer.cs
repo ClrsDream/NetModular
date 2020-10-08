@@ -1,67 +1,55 @@
-﻿using Microsoft.AspNetCore.Builder;
-#if NETSTANDARD2_0
-using Microsoft.AspNetCore.Hosting;
-#endif
+﻿using System.IO;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
-#if NETCOREAPP3_1
 using Microsoft.Extensions.Hosting;
-#endif
-using Microsoft.Extensions.Options;
-using NetModular.Lib.Utils.Core.Options;
-using NetModular.Module.Admin.Web.Core;
-using NetModular.Module.Admin.Web.Filters;
-using NetModular.Lib.Auth.Web;
 using NetModular.Lib.Module.AspNetCore;
-using System.IO;
-using NetModular.Module.Admin.Application.SystemService;
+using Microsoft.Extensions.Configuration;
+using NetModular.Lib.Config.Abstractions;
+using NetModular.Lib.Config.Abstractions.Impl;
+using NetModular.Lib.Module.Abstractions;
+using NetModular.Module.Admin.Application.ModuleService;
 
 namespace NetModular.Module.Admin.Web
 {
     public class ModuleInitializer : IModuleInitializer
     {
-#if NETSTANDARD2_0
-        public void ConfigureServices(IServiceCollection services, IHostingEnvironment env)
-#elif NETCOREAPP3_1
-        public void ConfigureServices(IServiceCollection services, IHostEnvironment env)
-#endif
+        public void ConfigureServices(IServiceCollection services, IModuleCollection modules, IHostEnvironment env, IConfiguration cfg)
         {
-            //审计日志服务
-            services.AddSingleton<IAuditingHandler, AuditingHandler>();
-            //权限验证服务
-            services.AddScoped<IPermissionValidateHandler, PermissionValidateHandler>();
-
-            //注入系统配置
-            var systemConfig = services.BuildServiceProvider().GetService<SystemConfigResolver>().GetConfig().Result;
-            services.AddSingleton(systemConfig);
         }
 
-#if NETSTANDARD2_0
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
-#elif NETCOREAPP3_1
         public void Configure(IApplicationBuilder app, IHostEnvironment env)
-#endif
         {
-            var options = app.ApplicationServices.GetService<IOptionsMonitor<ModuleCommonOptions>>().CurrentValue;
+            UseUploadFile(app);
 
-            var logoPath = Path.Combine(options.UploadPath, "Admin/Logo");
+            //同步模块信息
+            app.ApplicationServices.GetService<IModuleService>().Sync();
+        }
+
+        public void ConfigureMvc(MvcOptions mvcOptions)
+        {
+        }
+
+        /// <summary>
+        /// 启用上传文件访问权限
+        /// </summary>
+        /// <param name="app"></param>
+        private void UseUploadFile(IApplicationBuilder app)
+        {
+            var configProvider = app.ApplicationServices.GetService<IConfigProvider>();
+            var config = configProvider.Get<PathConfig>();
+            var logoPath = Path.Combine(config.UploadPath, "Admin/OSS/Open");
             if (!Directory.Exists(logoPath))
             {
                 Directory.CreateDirectory(logoPath);
             }
 
-            //开放logo访问权限
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(logoPath),
-                RequestPath = "/upload/admin/logo"
+                RequestPath = "/oss/o"
             });
-        }
-
-        public void ConfigureMvc(MvcOptions mvcOptions)
-        {
-            mvcOptions.Filters.Add(typeof(AuditingFilter));
         }
     }
 }

@@ -20,6 +20,21 @@ namespace NetModular.Lib.Utils.Core.Result
         public string Label { get; set; }
 
         /// <summary>
+        /// 值(可选)
+        /// </summary>
+        public object Value { get; set; }
+
+        /// <summary>
+        /// 扩展属性(可选)
+        /// </summary>
+        public string Extend { get; set; }
+
+        /// <summary>
+        /// 图标(可选)
+        /// </summary>
+        public string Icon { get; set; }
+
+        /// <summary>
         /// 数据项
         /// </summary>
         public T Item { get; set; }
@@ -32,7 +47,7 @@ namespace NetModular.Lib.Utils.Core.Result
         /// <summary>
         /// 子节点
         /// </summary>
-        public List<TreeResultModel<TKey, T>> Children { get; set; }
+        public List<TreeResultModel<TKey, T>> Children { get; set; } = new List<TreeResultModel<TKey, T>>();
     }
 
     /// <summary>
@@ -44,6 +59,6 @@ namespace NetModular.Lib.Utils.Core.Result
         /// <summary>
         /// 子节点
         /// </summary>
-        public new List<TreeResultModel<T>> Children { get; set; }
+        public new List<TreeResultModel<T>> Children { get; set; } = new List<TreeResultModel<T>>();
     }
 }

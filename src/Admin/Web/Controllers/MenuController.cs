@@ -3,20 +3,15 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using NetModular.Lib.Auth.Web.Attributes;
-using NetModular.Lib.Module.AspNetCore.Attributes;
-using NetModular.Lib.Utils.Core.Extensions;
 using NetModular.Lib.Utils.Core.Models;
-using NetModular.Lib.Utils.Core.Result;
 using NetModular.Module.Admin.Application.MenuService;
 using NetModular.Module.Admin.Application.MenuService.ViewModels;
-using NetModular.Module.Admin.Domain.Menu;
 using NetModular.Module.Admin.Domain.Menu.Models;
 
 namespace NetModular.Module.Admin.Web.Controllers
 {
     [Description("菜单管理")]
-    public class MenuController : ModuleController
+    public class MenuController : Web.ModuleController
     {
         private readonly IMenuService _service;
 
@@ -39,27 +34,18 @@ namespace NetModular.Module.Admin.Web.Controllers
             return _service.Query(model);
         }
 
-        [HttpGet]
-        [Common]
-        [DisableAuditing]
-        [Description("链接菜单打开方式下拉列表")]
-        public IResultModel TargetSelect()
-        {
-            return ResultModel.Success(EnumExtensions.ToResult<MenuTarget>(true));
-        }
-
         [HttpPost]
         [Description("添加")]
-        public async Task<IResultModel> Add(MenuAddModel model)
+        public Task<IResultModel> Add(MenuAddModel model)
         {
-            return await _service.Add(model);
+            return _service.Add(model);
         }
 
         [HttpDelete]
         [Description("删除")]
-        public async Task<IResultModel> Delete([BindRequired]Guid id)
+        public Task<IResultModel> Delete([BindRequired]Guid id)
         {
-            return await _service.Delete(id);
+            return _service.Delete(id);
         }
 
         [HttpGet]
@@ -71,9 +57,9 @@ namespace NetModular.Module.Admin.Web.Controllers
 
         [HttpPost]
         [Description("更新")]
-        public async Task<IResultModel> Update(MenuUpdateModel model)
+        public Task<IResultModel> Update(MenuUpdateModel model)
         {
-            return await _service.Update(model);
+            return _service.Update(model);
         }
 
         [HttpGet]

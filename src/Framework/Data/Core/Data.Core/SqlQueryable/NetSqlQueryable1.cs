@@ -10,24 +10,29 @@ using NetModular.Lib.Data.Abstractions.SqlQueryable;
 using NetModular.Lib.Data.Abstractions.SqlQueryable.GroupByQueryable;
 using NetModular.Lib.Data.Core.SqlQueryable.GroupByQueryable;
 using NetModular.Lib.Data.Core.SqlQueryable.Internal;
-using NetModular.Lib.Utils.Core.Extensions;
 
 namespace NetModular.Lib.Data.Core.SqlQueryable
 {
     internal class NetSqlQueryable<TEntity> : NetSqlQueryableAbstract, INetSqlQueryable<TEntity> where TEntity : IEntity, new()
     {
-        public NetSqlQueryable(IDbSet<TEntity> dbSet, Expression<Func<TEntity, bool>> whereExpression, string tableName = null) : base(dbSet, new QueryBody(dbSet.DbContext.Options.SqlAdapter))
+        public NetSqlQueryable(IDbSet<TEntity> dbSet, Expression<Func<TEntity, bool>> whereExpression, string tableName = null, bool noLock = true) : base(dbSet, new QueryBody(dbSet.DbContext.Options.SqlAdapter))
         {
             QueryBody.JoinDescriptors.Add(new QueryJoinDescriptor
             {
                 Type = JoinType.UnKnown,
                 Alias = "T1",
                 EntityDescriptor = EntityDescriptorCollection.Get<TEntity>(),
-                TableName = tableName.NotNull() ? tableName : Db.EntityDescriptor.TableName
+                TableName = tableName.NotNull() ? tableName : Db.EntityDescriptor.TableName,
+                NoLock = noLock
             });
             QueryBody.WhereDelegateType = typeof(Func<,>).MakeGenericType(typeof(TEntity), typeof(bool));
 
             Where(whereExpression);
+        }
+
+        private NetSqlQueryable(IDbSet dbSet, QueryBody queryBody) : base(dbSet, queryBody)
+        {
+
         }
 
         #region ==UseUow==
@@ -86,6 +91,12 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> Where(string whereSql)
+        {
+            QueryBody.SetWhere(whereSql);
+            return this;
+        }
+
         public INetSqlQueryable<TEntity> WhereIf(bool condition, Expression<Func<TEntity, bool>> expression)
         {
             if (condition)
@@ -94,9 +105,23 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> WhereIf(bool condition, string whereSql)
+        {
+            if (condition)
+                Where(whereSql);
+
+            return this;
+        }
+
         public INetSqlQueryable<TEntity> WhereIf(bool condition, Expression<Func<TEntity, bool>> ifExpression, Expression<Func<TEntity, bool>> elseExpression)
         {
             Where(condition ? ifExpression : elseExpression);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> WhereIf(bool condition, string ifWhereSql, string elseWhereSql)
+        {
+            Where(condition ? ifWhereSql : elseWhereSql);
             return this;
         }
 
@@ -108,9 +133,23 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> WhereNotNull(string condition, string whereSql)
+        {
+            if (condition.NotNull())
+                Where(whereSql);
+
+            return this;
+        }
+
         public INetSqlQueryable<TEntity> WhereNotNull(string condition, Expression<Func<TEntity, bool>> ifExpression, Expression<Func<TEntity, bool>> elseExpression)
         {
             Where(condition.NotNull() ? ifExpression : elseExpression);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> WhereNotNull(string condition, string ifWhereSql, string elseWhereSql)
+        {
+            Where(condition.NotNull() ? ifWhereSql : elseWhereSql);
             return this;
         }
 
@@ -122,9 +161,23 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> WhereNotNull(object condition, string whereSql)
+        {
+            if (condition != null)
+                Where(whereSql);
+
+            return this;
+        }
+
         public INetSqlQueryable<TEntity> WhereNotNull(object condition, Expression<Func<TEntity, bool>> ifExpression, Expression<Func<TEntity, bool>> elseExpression)
         {
             Where(condition != null ? ifExpression : elseExpression);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> WhereNotNull(object condition, string ifWhereSql, string elseWhereSql)
+        {
+            Where(condition != null ? ifWhereSql : elseWhereSql);
             return this;
         }
 
@@ -136,9 +189,35 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> WhereNotEmpty(Guid condition, string whereSql)
+        {
+            if (condition.NotEmpty())
+                Where(whereSql);
+
+            return this;
+        }
+
         public INetSqlQueryable<TEntity> WhereNotEmpty(Guid condition, Expression<Func<TEntity, bool>> ifExpression, Expression<Func<TEntity, bool>> elseExpression)
         {
             Where(condition.NotEmpty() ? ifExpression : elseExpression);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> WhereNotEmpty(Guid condition, string ifWhereSql, string elseWhereSql)
+        {
+            Where(condition.NotEmpty() ? ifWhereSql : elseWhereSql);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> WhereNotIn<TKey>(Expression<Func<TEntity, TKey>> key, IEnumerable<TKey> list)
+        {
+            QueryBody.SetWhereNotIn(key, list);
+            return this;
+        }
+
+        public INetSqlQueryable<TEntity> Where<TKey>(Expression<Func<TEntity, TKey>> key, QueryOperator queryOperator, INetSqlQueryable queryable)
+        {
+            QueryBody.SetWhere(key, queryOperator, queryable);
             return this;
         }
 
@@ -162,23 +241,29 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return this;
         }
 
+        public INetSqlQueryable<TEntity> SelectExclude<TResult>(Expression<Func<TEntity, TResult>> expression)
+        {
+            QueryBody.SetSelectExclude(expression);
+            return this;
+        }
+
         #endregion
 
         #region ==Join==
 
-        public INetSqlQueryable<TEntity, TEntity2> LeftJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null) where TEntity2 : IEntity, new()
+        public INetSqlQueryable<TEntity, TEntity2> LeftJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null, bool noLock = true) where TEntity2 : IEntity, new()
         {
-            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Left, tableName);
+            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Left, tableName, noLock);
         }
 
-        public INetSqlQueryable<TEntity, TEntity2> InnerJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null) where TEntity2 : IEntity, new()
+        public INetSqlQueryable<TEntity, TEntity2> InnerJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null, bool noLock = true) where TEntity2 : IEntity, new()
         {
-            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Inner, tableName);
+            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Inner, tableName, noLock);
         }
 
-        public INetSqlQueryable<TEntity, TEntity2> RightJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null) where TEntity2 : IEntity, new()
+        public INetSqlQueryable<TEntity, TEntity2> RightJoin<TEntity2>(Expression<Func<TEntity, TEntity2, bool>> onExpression, string tableName = null, bool noLock = true) where TEntity2 : IEntity, new()
         {
-            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Right, tableName);
+            return new NetSqlQueryable<TEntity, TEntity2>(Db, QueryBody, onExpression, JoinType.Right, tableName, noLock);
         }
 
         #endregion
@@ -251,28 +336,64 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return true;
         }
 
+        public bool Update(string updateSql, bool setModifiedBy = true, object parameterObject = null)
+        {
+            UpdateWithAffectedNum(null, setModifiedBy, updateSql, parameterObject);
+            return true;
+        }
+
         public async Task<bool> UpdateAsync(Expression<Func<TEntity, TEntity>> expression, bool setModifiedBy = true)
         {
             await UpdateWithAffectedNumAsync(expression, setModifiedBy);
             return true;
         }
 
-        public int UpdateWithAffectedNum(Expression<Func<TEntity, TEntity>> expression, bool setModifiedBy = true)
+        public async Task<bool> UpdateAsync(string updateSql, bool setModifiedBy = true, object parameterObject = null)
         {
-            QueryBody.Update = expression;
-            QueryBody.SetModifiedBy = setModifiedBy;
-            var sql = QueryBuilder.UpdateSqlBuild(out IQueryParameters parameters);
-
-            return Db.Execute(sql, parameters.Parse(), QueryBody.Uow);
+            await UpdateWithAffectedNumAsync(null, setModifiedBy, updateSql, parameterObject);
+            return true;
         }
 
-        public Task<int> UpdateWithAffectedNumAsync(Expression<Func<TEntity, TEntity>> expression, bool setModifiedBy = true)
+        public int UpdateWithAffectedNum(Expression<Func<TEntity, TEntity>> expression, bool setModifiedBy = true, string updateSql = null, object parameterObject = null)
         {
-            QueryBody.Update = expression;
+            if (updateSql.IsNull())
+            {
+                QueryBody.Update = expression;
+            }
+            else
+            {
+                QueryBody.UpdateSql = updateSql;
+            }
+
             QueryBody.SetModifiedBy = setModifiedBy;
             var sql = QueryBuilder.UpdateSqlBuild(out IQueryParameters parameters);
+            var param = parameters.Parse();
+            if (updateSql.IsNull() && parameterObject != null)
+            {
+                param.AddDynamicParams(parameterObject);
+            }
+            return Db.Execute(sql, param, QueryBody.Uow);
+        }
 
-            return Db.ExecuteAsync(sql, parameters.Parse(), QueryBody.Uow);
+        public Task<int> UpdateWithAffectedNumAsync(Expression<Func<TEntity, TEntity>> expression, bool setModifiedBy = true, string updateSql = null, object parameterObject = null)
+        {
+            if (updateSql.IsNull())
+            {
+                QueryBody.Update = expression;
+            }
+            else
+            {
+                QueryBody.UpdateSql = updateSql;
+            }
+
+            QueryBody.SetModifiedBy = setModifiedBy;
+            var sql = QueryBuilder.UpdateSqlBuild(out IQueryParameters parameters);
+            var param = parameters.Parse();
+            if (updateSql.IsNull() && parameterObject != null)
+            {
+                param.AddDynamicParams(parameterObject);
+            }
+            return Db.ExecuteAsync(sql, param, QueryBody.Uow);
         }
 
         #endregion
@@ -341,6 +462,11 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
             return new GroupByQueryable1<TResult, TEntity>(Db, QueryBody, QueryBuilder, expression);
         }
 
+        public IGroupByQueryable1<INetSqlGroupingKey1<TEntity>, TEntity> GroupBy()
+        {
+            return new GroupByQueryable1<INetSqlGroupingKey1<TEntity>, TEntity>(Db, QueryBody, QueryBuilder, null);
+        }
+
         #endregion
 
         #region ==ToList==
@@ -391,6 +517,21 @@ namespace NetModular.Lib.Data.Core.SqlQueryable
         {
             QueryBody.FilterDeleted = false;
             return this;
+        }
+
+        public INetSqlQueryable<TEntity> NotFilterTenant()
+        {
+            QueryBody.FilterTenant = false;
+            return this;
+        }
+
+        #endregion
+
+        #region ==Copy==
+
+        public INetSqlQueryable<TEntity> Copy()
+        {
+            return new NetSqlQueryable<TEntity>(Db, QueryBody.Copy());
         }
 
         #endregion

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NetModular.Lib.Module.Abstractions;
-using NetModular.Lib.Utils.Core;
-using NetModular.Lib.Utils.Core.Helpers;
-using NetModular.Lib.Utils.Core.Options;
 
 namespace NetModular.Lib.Module.GenericHost
 {
@@ -14,20 +13,13 @@ namespace NetModular.Lib.Module.GenericHost
         /// 添加模块
         /// </summary>
         /// <param name="services"></param>
-        /// <param name="environmentName">环境名称</param>
         /// <returns></returns>
-        public static IModuleCollection AddModules(this IServiceCollection services, string environmentName)
+        public static IModuleCollection AddModules(this IServiceCollection services)
         {
             var modules = new ModuleCollection();
+            modules.Load();
+
             services.AddSingleton<IModuleCollection>(modules);
-
-            var cfgHelper = new ConfigurationHelper();
-            var cfg = cfgHelper.Load("module", environmentName, true);
-            if (cfg == null)
-                return modules;
-
-            //通用配置
-            services.Configure<ModuleCommonOptions>(cfg);
 
             foreach (var module in modules)
             {
@@ -36,17 +28,28 @@ namespace NetModular.Lib.Module.GenericHost
 
                 services.AddApplicationServices(module);
 
-                //加载模块配置项
-                var optionsConfigureType = module.AssemblyDescriptor.Infrastructure.GetTypes().FirstOrDefault(m => typeof(IModuleOptionsConfigure).IsAssignableFrom(m));
-                if (optionsConfigureType != null)
-                {
-                    ((IModuleOptionsConfigure)Activator.CreateInstance(optionsConfigureType)).ConfigOptions(services, cfg.GetSection(module.Id));
-                }
-
                 services.AddSingleton(module);
             }
 
             return modules;
+        }
+
+        /// <summary>
+        /// 添加模块的自定义服务
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="modules"></param>
+        /// <param name="env"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddModuleServices(this IServiceCollection services, IModuleCollection modules, IHostEnvironment env, IConfiguration cfg)
+        {
+            foreach (var module in modules)
+            {
+                //加载模块初始化器
+                ((ModuleDescriptor)module).ServicesConfigurator?.Configure(services, modules, env, cfg);
+            }
+
+            return services;
         }
 
         /// <summary>
@@ -67,21 +70,6 @@ namespace NetModular.Lib.Module.GenericHost
                     services.Add(new ServiceDescriptor(serviceType, implementationType, ServiceLifetime.Singleton));
                 }
             }
-        }
-
-        /// <summary>
-        /// 自动注入单例服务
-        /// </summary>
-        /// <param name="services"></param>
-        /// <param name="module"></param>
-        private static void AddSingleton(this IServiceCollection services, IModuleDescriptor module)
-        {
-            if (module.AssemblyDescriptor == null)
-                return;
-
-            services.AddSingletonFromAssembly(module.AssemblyDescriptor.Domain);
-            services.AddSingletonFromAssembly(module.AssemblyDescriptor.Infrastructure);
-            services.AddSingletonFromAssembly(module.AssemblyDescriptor.Application);
         }
     }
 }

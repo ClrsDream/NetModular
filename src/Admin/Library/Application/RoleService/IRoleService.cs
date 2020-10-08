@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NetModular.Lib.Utils.Core.Result;
+using NetModular.Lib.Auth.Abstractions;
 using NetModular.Module.Admin.Application.RoleService.ViewModels;
 using NetModular.Module.Admin.Domain.Role.Models;
 
@@ -44,32 +44,31 @@ namespace NetModular.Module.Admin.Application.RoleService
         Task<IResultModel> Update(RoleUpdateModel model);
 
         /// <summary>
-        /// 获取角色绑定的菜单列表
+        /// 查询角色绑定的页面
+        /// </summary>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        Task<IResultModel> QueryBindPages(Guid roleId);
+
+        /// <summary>
+        /// 绑定页面
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        Task<IResultModel> BindPages(RolePageBindModel model);
+
+        /// <summary>
+        /// 获取角色绑定的菜单列表(含按钮)
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<IResultModel> MenuList(Guid id);
+        Task<IResultModel> QueryBindMenus(Guid id);
 
         /// <summary>
         /// 绑定菜单
         /// </summary>
         /// <returns></returns>
-        Task<IResultModel> BindMenu(RoleMenuBindModel model);
-
-        /// <summary>
-        /// 获取绑定菜单的按钮信息
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="menuId"></param>
-        /// <returns></returns>
-        Task<IResultModel> MenuButtonList(Guid id, Guid menuId);
-
-        /// <summary>
-        /// 绑定菜单按钮
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        Task<IResultModel> BindMenuButton(RoleMenuButtonBindModel model);
+        Task<IResultModel> BindMenus(RoleMenuBindModel model);
 
         /// <summary>
         /// 获取角色的下拉列表
@@ -83,5 +82,20 @@ namespace NetModular.Module.Admin.Application.RoleService
         /// <param name="model"></param>
         /// <returns></returns>
         Task<bool> AddSpecified(RoleAddModel model);
+
+        /// <summary>
+        /// 查询平台权限绑定列表
+        /// </summary>
+        /// <param name="roleId">角色编号</param>
+        /// <param name="platform"></param>
+        /// <returns></returns>
+        Task<IResultModel> QueryPlatformPermissions(Guid roleId, Platform platform);
+
+        /// <summary>
+        /// 平台权限绑定
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        Task<IResultModel> BindPlatformPermissions(RolePermissionBindModel model);
     }
 }

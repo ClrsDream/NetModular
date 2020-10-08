@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 
-namespace NetModular.Lib.Utils.Core.Result
+// ReSharper disable once CheckNamespace
+namespace NetModular
 {
     /// <summary>
     /// 返回结果模型接口
@@ -12,6 +13,11 @@ namespace NetModular.Lib.Utils.Core.Result
         /// </summary>
         [JsonIgnore]
         bool Successful { get; }
+
+        /// <summary>
+        /// 错误
+        /// </summary>
+        string Msg { get; }
     }
 
     /// <summary>

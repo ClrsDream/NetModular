@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NetModular.Lib.Data.Abstractions;
 using NetModular.Lib.Utils.Core.Result;
-using NetModular.Module.Admin.Infrastructure.Repositories.PostgreSQL.Sql;
 
 namespace NetModular.Module.Admin.Infrastructure.Repositories.PostgreSQL
 {
@@ -13,7 +12,7 @@ namespace NetModular.Module.Admin.Infrastructure.Repositories.PostgreSQL
         {
         }
 
-        public override Task<IEnumerable<ChatDataRow>> QueryLatestWeekPv()
+        public override Task<IEnumerable<ChartDataResultModel>> QueryLatestWeekPv()
         {
             throw new NotImplementedException();
 

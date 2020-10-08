@@ -1,98 +1,67 @@
 <template>
   <nm-container>
-    <nm-list ref="list" v-bind="list">
-      <!--查询条件-->
-      <template v-slot:querybar>
-        <el-form-item label="名称：" prop="name">
-          <el-input v-model="list.model.name" clearable />
-        </el-form-item>
+    <nm-split v-model="split">
+      <template v-slot:left>
+        <role-tree ref="tree" @change="onTreeChange" />
       </template>
-
-      <!--按钮-->
-      <template v-slot:querybar-buttons>
-        <nm-button v-bind="buttons.add" @click="addPage.visible = true" />
+      <template v-slot:right>
+        <nm-tabs>
+          <el-tabs type="border-card">
+            <el-tab-pane v-if="_hasButton(buttons.bindMenus)">
+              <span slot="label"><nm-icon name="menu" /> 菜单绑定</span>
+              <menu-bind :id="roleId" />
+            </el-tab-pane>
+            <el-tab-pane v-if="_hasButton(buttons.bindPages)" lazy>
+              <span slot="label"><nm-icon name="web" /> 页面授权</span>
+              <page-bind :id="roleId" />
+            </el-tab-pane>
+            <el-tab-pane v-if="_hasButton(buttons.bindPlatform)" lazy>
+              <span slot="label"><nm-icon name="android" /> 平台授权</span>
+              <platform-bind :id="roleId" />
+            </el-tab-pane>
+          </el-tabs>
+        </nm-tabs>
       </template>
-
-      <template v-slot:col-name="{ row }">
-        <el-tooltip v-if="row.isSpecified" class="item" effect="dark" content="指定角色" placement="top">
-          <div>
-            <nm-icon class="nm-text-warning" style="font-size:25px" name="star-fill" />
-            <span>{{ row.name }}</span>
-          </div>
-        </el-tooltip>
-        <span v-else>{{ row.name }}</span>
-      </template>
-
-      <!--操作列-->
-      <template v-slot:col-operation="{ row }">
-        <nm-button v-bind="buttons.edit" @click="edit(row)" :disabled="row.isSpecified" />
-        <nm-button v-bind="buttons.bindMenu" @click="bindMenu(row)" />
-        <nm-button-delete v-bind="buttons.del" :action="removeAction" :id="row.id" @success="refresh" :disabled="row.isSpecified" />
-      </template>
-    </nm-list>
-
-    <!--添加页-->
-    <add-page :visible.sync="addPage.visible" @success="refresh" />
-    <!--编辑页-->
-    <edit-page :id="editDialog.id" :visible.sync="editDialog.visible" @success="refresh" />
-    <!--绑定菜单-->
-    <bind-menu-page :id="bindMenuDialog.id" :visible.sync="bindMenuDialog.visible" />
+    </nm-split>
   </nm-container>
 </template>
 <script>
+import { mixins } from 'netmodular-ui'
 import page from './page'
-import cols from './cols'
-import AddPage from '../components/add'
-import EditPage from '../components/edit'
-import BindMenuPage from '../components/menu-bind'
-
-// 接口
-const api = $api.admin.role
-
+import RoleTree from '../components/tree'
+import MenuBind from '../components/menu-bind'
+import PageBind from '../components/page-bind'
+import PlatformBind from '../components/platform-bind'
 export default {
   name: page.name,
-  components: { AddPage, EditPage, BindMenuPage },
+  mixins: [mixins.button],
+  components: { RoleTree, MenuBind, PageBind, PlatformBind },
   data() {
     return {
-      list: {
-        title: page.title,
-        cols,
-        action: api.query,
-        model: {
-          name: ''
-        }
-      },
-      addPage: {
-        visible: false
-      },
-      editDialog: {
-        visible: false,
-        id: ''
-      },
-      bindMenuDialog: {
-        visible: false,
-        id: ''
-      },
-      removeAction: api.remove,
+      split: 0.2,
+      roleId: '',
       buttons: page.buttons
     }
   },
   methods: {
-    refresh() {
-      this.$refs.list.refresh()
-    },
-    edit(row) {
-      this.editDialog = {
-        id: row.id,
-        visible: true
-      }
-    },
-    bindMenu(row) {
-      this.bindMenuDialog = {
-        id: row.id,
-        visible: true
-      }
+    onTreeChange(data) {
+      this.roleId = data.id
     }
   }
 }
 </script>
+<style lang="scss">
+.nm-admin-role-menus-tree {
+  &-node {
+    position: relative;
+    padding-left: 300px;
+    height: 26px;
+    line-height: 26px;
+
+    &-label {
+      position: absolute;
+      left: 0;
+    }
+  }
+}
+</style>

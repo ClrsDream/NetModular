@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Builder;
-#if NETSTANDARD2_0
-using Microsoft.AspNetCore.Hosting;
-#endif
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-#if NETCOREAPP3_1
 using Microsoft.Extensions.Hosting;
-#endif
+using NetModular.Lib.Module.Abstractions;
 
 namespace NetModular.Lib.Module.AspNetCore
 {
@@ -17,25 +14,20 @@ namespace NetModular.Lib.Module.AspNetCore
     {
         /// <summary>
         /// 注入服务
+        /// <para>此方法用于注入与Web相关的服务，否则请通过IModuleServicesConfigurator接口注册</para>
         /// </summary>
         /// <param name="services"></param>
+        /// <param name="modules">模块集合</param>
         /// <param name="env">环境变量</param>
-#if NETSTANDARD2_0
-        void ConfigureServices(IServiceCollection services, IHostingEnvironment env);
-#elif NETCOREAPP3_1
-        void ConfigureServices(IServiceCollection services, IHostEnvironment env);
-#endif
+        /// <param name="cfg">配置</param>
+        void ConfigureServices(IServiceCollection services, IModuleCollection modules, IHostEnvironment env, IConfiguration cfg);
 
         /// <summary>
         /// 配置中间件
         /// </summary>
         /// <param name="app"></param>
         /// <param name="env"></param>
-#if NETSTANDARD2_0
-        void Configure(IApplicationBuilder app, IHostingEnvironment env);
-#elif NETCOREAPP3_1
         void Configure(IApplicationBuilder app, IHostEnvironment env);
-#endif
 
         /// <summary>
         /// 配置MVC

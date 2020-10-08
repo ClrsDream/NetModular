@@ -8,32 +8,36 @@ namespace NetModular.Lib.Data.Core
     /// </summary>
     public class UnitOfWork : IUnitOfWork
     {
+        private IDbConnection _dbConnection;
         public UnitOfWork(IDbTransaction transaction)
         {
             Transaction = transaction;
+            _dbConnection = transaction?.Connection;
         }
 
         public IDbTransaction Transaction { get; private set; }
 
         public void Commit()
         {
-            if (Transaction != null)
-            {
-                Transaction.Commit();
-                Transaction?.Connection?.Close();
-                Transaction = null;
-            }
+            Transaction?.Commit();
+            Close();
+            Transaction = null;
         }
 
         public void Rollback()
         {
             Transaction?.Rollback();
-            Transaction?.Connection.Close();
+            Close();
         }
 
         public void Dispose()
         {
             Rollback();
+        }
+
+        private void Close()
+        {
+            _dbConnection?.Close();
         }
     }
 }

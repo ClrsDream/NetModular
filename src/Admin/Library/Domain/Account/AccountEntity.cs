@@ -1,6 +1,7 @@
 ﻿using System;
 using NetModular.Lib.Auth.Abstractions;
 using NetModular.Lib.Data.Abstractions.Attributes;
+using NetModular.Lib.Data.Abstractions.Entities;
 using NetModular.Lib.Data.Core.Entities.Extend;
 
 namespace NetModular.Module.Admin.Domain.Account
@@ -9,8 +10,13 @@ namespace NetModular.Module.Admin.Domain.Account
     /// 账户
     /// </summary>
     [Table("Account")]
-    public partial class AccountEntity : EntityBaseWithSoftDelete
+    public partial class AccountEntity : EntityBaseWithSoftDelete, ITenant
     {
+        /// <summary>
+        /// 租户编号
+        /// </summary>
+        public Guid? TenantId { get; set; }
+
         /// <summary>
         /// 类型
         /// </summary>
@@ -43,16 +49,6 @@ namespace NetModular.Module.Admin.Domain.Account
         /// </summary>
         [Length(300)]
         public string Email { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 最后登录时间
-        /// </summary>
-        public DateTime LoginTime { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// 最后登录IP
-        /// </summary>
-        public string LoginIP { get; set; } = string.Empty;
 
         /// <summary>
         /// 状态

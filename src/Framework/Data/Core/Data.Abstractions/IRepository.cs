@@ -223,8 +223,9 @@ namespace NetModular.Lib.Data.Abstractions
         /// <param name="id"></param>
         /// <param name="uow">工作单元</param>
         /// <param name="rowLock">行锁</param>
+        /// <param name="noLock">SqlServer的NOLOCK</param>
         /// <returns></returns>
-        TEntity Get(dynamic id, IUnitOfWork uow, bool rowLock = false);
+        TEntity Get(dynamic id, IUnitOfWork uow, bool rowLock = false, bool noLock = true);
 
         /// <summary>
         /// 根据主键查询
@@ -239,8 +240,9 @@ namespace NetModular.Lib.Data.Abstractions
         /// <param name="id"></param>
         /// <param name="uow">工作单元</param>
         /// <param name="rowLock">行锁</param>
+        /// <param name="noLock">SqlServer的NOLOCK</param>
         /// <returns></returns>
-        Task<TEntity> GetAsync(dynamic id, IUnitOfWork uow, bool rowLock = false);
+        Task<TEntity> GetAsync(dynamic id, IUnitOfWork uow, bool rowLock = false, bool noLock = true);
 
         #endregion
 
@@ -305,6 +307,35 @@ namespace NetModular.Lib.Data.Abstractions
         /// <param name="uow">工作单元</param>
         /// <returns></returns>
         Task<bool> SoftDeleteAsync(dynamic id, IUnitOfWork uow);
+
+        #endregion
+
+        #region ==Clear==
+
+        /// <summary>
+        /// 清空数据
+        /// </summary>
+        /// <param name="uow">工作单元</param>
+        /// <returns></returns>
+        bool Clear(IUnitOfWork uow = null);
+
+        /// <summary>
+        /// 清空数据
+        /// </summary>
+        /// <param name="uow">工作单元</param>
+        /// <returns></returns>
+        Task<bool> ClearAsync(IUnitOfWork uow = null);
+
+        #endregion
+
+        #region ==表操作==
+
+        /// <summary>
+        /// 创建表
+        /// </summary>
+        /// <param name="tableName">指定表名称</param>
+        /// <returns></returns>
+        Task CreateTable(string tableName = null);
 
         #endregion
     }

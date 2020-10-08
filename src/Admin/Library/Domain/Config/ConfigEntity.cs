@@ -1,5 +1,6 @@
-﻿using NetModular.Lib.Data.Abstractions.Attributes;
-using NetModular.Lib.Data.Core.Entities.Extend;
+﻿using NetModular.Lib.Config.Abstractions;
+using NetModular.Lib.Data.Abstractions.Attributes;
+using NetModular.Lib.Data.Core.Entities;
 
 namespace NetModular.Module.Admin.Domain.Config
 {
@@ -7,24 +8,23 @@ namespace NetModular.Module.Admin.Domain.Config
     /// 配置项
     /// </summary>
     [Table("Config")]
-    public class ConfigEntity : EntityBase<int>
+    public partial class ConfigEntity : Entity<int>
     {
         /// <summary>
-        /// 键名
+        /// 类型
         /// </summary>
-        [Length(250)]
-        public string Key { get; set; }
+        public ConfigType Type { get; set; }
+
+        /// <summary>
+        /// 编码
+        /// </summary>
+        public string Code { get; set; }
 
         /// <summary>
         /// 值
         /// </summary>
-        [Length(500)]
+        [Max]
+        [Nullable]
         public string Value { get; set; }
-
-        /// <summary>
-        /// 备注
-        /// </summary>
-        [Length(250)]
-        public string Remarks { get; set; }
     }
 }

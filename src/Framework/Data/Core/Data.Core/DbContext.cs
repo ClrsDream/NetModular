@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Dapper;
 using NetModular.Lib.Auth.Abstractions;
 using NetModular.Lib.Data.Abstractions;
 using NetModular.Lib.Data.Abstractions.Entities;
-using NetModular.Lib.Utils.Core.Extensions;
+using NetModular.Lib.Data.Core.Entities;
 using IsolationLevel = System.Data.IsolationLevel;
 
 namespace NetModular.Lib.Data.Core
@@ -19,11 +20,6 @@ namespace NetModular.Lib.Data.Core
         #region ==属性==
 
         /// <summary>
-        /// 服务提供器
-        /// </summary>
-        public IServiceProvider ServiceProvider { get; }
-
-        /// <summary>
         /// 登录信息
         /// </summary>
         public ILoginInfo LoginInfo { get; }
@@ -33,15 +29,22 @@ namespace NetModular.Lib.Data.Core
         /// </summary>
         public IDbContextOptions Options { get; }
 
+        /// <summary>
+        /// 数据库是否已存在
+        /// </summary>
+        public bool DatabaseExists { get; private set; }
+
         #endregion
 
         #region ==构造函数==
 
-        protected DbContext(IDbContextOptions options, IServiceProvider serviceProvider)
+        protected DbContext(IDbContextOptions options)
         {
             Options = options;
-            ServiceProvider = serviceProvider;
             LoginInfo = Options.LoginInfo;
+
+            //加载实体描述符
+            LoadEntityDescriptors();
 
             if (Options.DbOptions.CreateDatabase)
             {
@@ -88,7 +91,7 @@ namespace NetModular.Lib.Data.Core
                     sql.AppendFormat("ATTACH DATABASE '{0}' as '{1}';", dbFilePath, c.Database);
                 }
 
-                conn.ExecuteAsync(sql.ToString());
+                conn.ExecuteAsync(sql.ToString()).Wait();
             }
 
             return conn;
@@ -96,7 +99,7 @@ namespace NetModular.Lib.Data.Core
 
         public IUnitOfWork NewUnitOfWork()
         {
-            //SQLite数据库开启事务时会包 database is locked 错误
+            //SQLite数据库开启事务时会报 database is locked 错误
             if (Options.SqlAdapter.SqlDialect == Abstractions.Enums.SqlDialect.SQLite)
                 return new UnitOfWork(null);
 
@@ -107,7 +110,7 @@ namespace NetModular.Lib.Data.Core
 
         public IUnitOfWork NewUnitOfWork(IsolationLevel isolationLevel)
         {
-            //SQLite数据库开启事务时会包 database is locked 错误
+            //SQLite数据库开启事务时会报 database is locked 错误
             if (Options.SqlAdapter.SqlDialect == Abstractions.Enums.SqlDialect.SQLite)
                 return new UnitOfWork(null);
 
@@ -118,12 +121,29 @@ namespace NetModular.Lib.Data.Core
 
         public IDbSet<TEntity> Set<TEntity>() where TEntity : IEntity, new()
         {
-            return new DbSet<TEntity>(this);
+            var descriptor = EntityDescriptorCollection.Get<TEntity>();
+            if (descriptor.DbSet == null)
+                descriptor.DbSet = new DbSet<TEntity>(descriptor.DbContext);
+
+            return (IDbSet<TEntity>)descriptor.DbSet;
+        }
+
+        public void LoadEntityDescriptors()
+        {
+            var entityTypes = Options.DbModuleOptions.EntityTypes;
+            if (entityTypes != null && entityTypes.Any())
+            {
+                foreach (var entityType in entityTypes)
+                {
+                    EntityDescriptorCollection.Add(new EntityDescriptor(this, entityType));
+                }
+            }
         }
 
         public void CreateDatabase()
         {
-            Options.SqlAdapter.CreateDatabase(EntityDescriptorCollection.Get(Options.DbModuleOptions.Name), Options.DatabaseCreateEvents);
+            Options.SqlAdapter.CreateDatabase(EntityDescriptorCollection.Get(Options.DbModuleOptions.Name), Options.DatabaseCreateEvents, out bool exists);
+            DatabaseExists = exists;
         }
 
         #endregion

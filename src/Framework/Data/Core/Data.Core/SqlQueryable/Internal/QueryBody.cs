@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using NetModular.Lib.Data.Abstractions;
+using NetModular.Lib.Data.Abstractions.Entities;
 using NetModular.Lib.Data.Abstractions.Enums;
 using NetModular.Lib.Data.Abstractions.Pagination;
-using NetModular.Lib.Utils.Core;
-using NetModular.Lib.Utils.Core.Extensions;
+using NetModular.Lib.Data.Abstractions.SqlQueryable;
 
 namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
 {
@@ -47,14 +48,24 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         public LambdaExpression Select { get; set; }
 
         /// <summary>
+        /// 查询排除的列
+        /// </summary>
+        public LambdaExpression SelectExclude { get; set; }
+
+        /// <summary>
         /// 过滤条件
         /// </summary>
-        public List<LambdaExpression> Where { get; } = new List<LambdaExpression>();
+        public List<QueryWhere> Where { get; } = new List<QueryWhere>();
 
         /// <summary>
         /// 更新表达式
         /// </summary>
         public LambdaExpression Update { get; set; }
+
+        /// <summary>
+        /// 更新SQL语句
+        /// </summary>
+        public string UpdateSql { get; set; }
 
         /// <summary>
         /// 设置修改人信息
@@ -74,7 +85,7 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         /// <summary>
         /// 分组属性集合
         /// </summary>
-        public List<GroupByJoinDescriptor> GroupByPropertyList { get; private set; }
+        public List<GroupByJoinDescriptor> GroupByPropertyList { get; private set; } = new List<GroupByJoinDescriptor>();
 
         /// <summary>
         /// 聚合
@@ -101,6 +112,11 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         /// </summary>
         public bool FilterDeleted { get; set; } = true;
 
+        /// <summary>
+        /// 过滤租户
+        /// </summary>
+        public bool FilterTenant { get; set; } = true;
+
         #endregion
 
         #region ==方法==
@@ -114,8 +130,38 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         {
             if (whereExpression != null)
             {
-                Where.Add(whereExpression);
+                Where.Add(new QueryWhere(whereExpression));
             }
+        }
+
+        public void SetWhere(string whereSql)
+        {
+            if (whereSql.NotNull())
+            {
+                Where.Add(new QueryWhere(whereSql));
+            }
+        }
+
+        public void SetWhere(LambdaExpression expression, QueryOperator queryOperator, INetSqlQueryable subQueryable)
+        {
+            if (subQueryable != null)
+            {
+                Where.Add(new QueryWhere(expression, queryOperator, subQueryable));
+            }
+        }
+
+        public void SetWhereNotIn<TKey>(LambdaExpression key, IEnumerable<TKey> list)
+        {
+            if (key == null || list == null)
+                return;
+
+            var sqlBuilder = new StringBuilder();
+            sqlBuilder.Append(GetColumnName(key.Body as MemberExpression, key));
+            sqlBuilder.Append(" NOT IN (");
+            ResolveIEnumerable(sqlBuilder, list);
+            sqlBuilder.Append(") ");
+
+            SetWhere(sqlBuilder.ToString());
         }
 
         public void SetOrderBy(LambdaExpression expression, SortType sortType = SortType.Asc)
@@ -169,7 +215,7 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
                 }
                 else
                 {
-                    if (memberExp.Expression.Type == typeof(string))
+                    if (memberExp.Expression.Type.IsString())
                     {
                         var memberName = memberExp.Member.Name.Equals("Length");
                         //解析Length函数
@@ -191,40 +237,21 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
 
         private void SetOrderByMethod(LambdaExpression expression, MethodCallExpression methodCallExp, SortType sortType = SortType.Asc)
         {
-            var methodName = methodCallExp.Method.Name;
-            if (methodName.Equals("Substring"))
+            var methodName = methodCallExp.Method.Name.ToUpper();
+            switch (methodName)
             {
-                SetOrderByForSubstring(methodCallExp, expression, sortType);
-                return;
-            }
-
-            if (methodName.Equals("Count"))
-            {
-                Sorts.Add(new Sort("COUNT(0)", sortType));
-                return;
-            }
-
-            if (methodName.Equals("Sum"))
-            {
-                ResolveSelectForFunc(methodCallExp, "SUM");
-                return;
-            }
-
-            if (methodName.Equals("Avg"))
-            {
-                ResolveSelectForFunc(methodCallExp, "AVG");
-                return;
-            }
-
-            if (methodName.Equals("Max"))
-            {
-                ResolveSelectForFunc(methodCallExp, "MAX");
-                return;
-            }
-
-            if (methodName.Equals("Min"))
-            {
-                ResolveSelectForFunc(methodCallExp, "MIN");
+                case "SUBSTRING":
+                    SetOrderByForSubstring(methodCallExp, expression, sortType);
+                    return;
+                case "COUNT":
+                    Sorts.Add(new Sort("COUNT(0)", sortType));
+                    return;
+                case "SUM":
+                case "AVG":
+                case "MAX":
+                case "MIN":
+                    ResolveSelectForFunc(methodCallExp, methodName, sortType);
+                    return;
             }
         }
 
@@ -254,12 +281,13 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         /// </summary>
         /// <param name="callExp"></param>
         /// <param name="funcName"></param>
-        private void ResolveSelectForFunc(MethodCallExpression callExp, string funcName)
+        /// <param name="sortType"></param>
+        private void ResolveSelectForFunc(MethodCallExpression callExp, string funcName, SortType sortType)
         {
             if (callExp.Arguments[0] is UnaryExpression unary && unary.Operand is LambdaExpression lambda)
             {
                 var colName = GetColumnName(lambda.Body as MemberExpression, lambda);
-                Sorts.Add(new Sort($"{funcName}({colName})"));
+                Sorts.Add(new Sort($"{funcName}({colName})", sortType));
             }
         }
 
@@ -287,6 +315,11 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
             Select = selectExpression;
         }
 
+        public void SetSelectExclude(LambdaExpression selectExpression)
+        {
+            SelectExclude = selectExpression;
+        }
+
         public void SetLimit(int skip, int take)
         {
             Skip = skip < 0 ? 0 : skip;
@@ -295,27 +328,46 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
 
         public void SetGroupBy(Expression expression)
         {
-            GroupBy = expression as LambdaExpression;
             IsGroupBy = true;
-
-            GroupByPropertyList = new List<GroupByJoinDescriptor>();
-            var lambda = expression as LambdaExpression;
-            if (lambda.Body.NodeType != ExpressionType.New)
-                throw new ArgumentException("分组条件必须使用匿名类new{}");
-
-            var newExp = lambda.Body as NewExpression;
-            for (var i = 0; i < newExp.Members.Count; i++)
+            if (expression != null)
             {
-                var alias = newExp.Members[i].Name;
-                var member = newExp.Arguments[0] as MemberExpression;
-                var parameter = member.Expression as ParameterExpression;
-                var joinDescriptor = JoinDescriptors.FirstOrDefault(m => m.EntityDescriptor.EntityType == parameter.Type);
-                GroupByPropertyList.Add(new GroupByJoinDescriptor
+                GroupBy = expression as LambdaExpression;
+                var lambda = expression as LambdaExpression;
+                if (lambda != null && lambda.Body.NodeType != ExpressionType.New)
+                    throw new ArgumentException("分组条件必须使用匿名类new{}");
+
+                if (lambda?.Body is NewExpression newExp)
+                    for (var i = 0; i < newExp.Members.Count; i++)
+                    {
+                        var alias = newExp.Members[i].Name;
+                        if (newExp.Arguments[i] is MemberExpression member)
+                        {
+                            var parameter = member.Expression as ParameterExpression;
+                            var joinDescriptor = JoinDescriptors.FirstOrDefault(m => parameter != null && m.EntityDescriptor.EntityType == parameter.Type);
+
+                            GroupByPropertyList.Add(new GroupByJoinDescriptor
+                            {
+                                Name = member.Member.Name,
+                                Alias = alias,
+                                JoinDescriptor = joinDescriptor
+                            });
+                        }
+                    }
+            }
+            else
+            {
+                foreach (var joinDescriptor in JoinDescriptors)
                 {
-                    Name = member.Member.Name,
-                    Alias = alias,
-                    JoinDescriptor = joinDescriptor
-                });
+                    foreach (var column in joinDescriptor.EntityDescriptor.Columns)
+                    {
+                        GroupByPropertyList.Add(new GroupByJoinDescriptor
+                        {
+                            Name = column.Name,
+                            Alias = column.PropertyInfo.Name,
+                            JoinDescriptor = joinDescriptor
+                        });
+                    }
+                }
             }
         }
 
@@ -338,6 +390,60 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         }
 
         /// <summary>
+        /// 获取列描述
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="lambda"></param>
+        /// <returns></returns>
+        public IColumnDescriptor GetColumnDescriptor(MemberExpression exp, LambdaExpression lambda)
+        {
+            var index = 0;
+            var memberParameter = exp.Expression as ParameterExpression;
+            if (memberParameter == null)
+                return null;
+
+            foreach (var parameter in lambda.Parameters)
+            {
+                if (parameter.Name.Equals(memberParameter.Name))
+                    break;
+                index++;
+            }
+            var descriptor = JoinDescriptors[index];
+            var name = exp.Member.Name;
+
+            return GetColumnDescriptor(name, descriptor);
+        }
+
+        /// <summary>
+        /// 获取列描述
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="lambda"></param>
+        /// <param name="colName">列名</param>
+        /// <returns></returns>
+        public IColumnDescriptor GetColumnDescriptor(MemberExpression exp, LambdaExpression lambda, out string colName)
+        {
+            colName = string.Empty;
+            var index = 0;
+            var memberParameter = exp.Expression as ParameterExpression;
+            if (memberParameter == null)
+                return null;
+
+            foreach (var parameter in lambda.Parameters)
+            {
+                if (parameter.Name.Equals(memberParameter.Name))
+                    break;
+                index++;
+            }
+            var descriptor = JoinDescriptors[index];
+            var name = exp.Member.Name;
+
+            colName = GetColumnName(name, descriptor);
+
+            return GetColumnDescriptor(name, descriptor);
+        }
+
+        /// <summary>
         /// 获取列名
         /// </summary>
         /// <param name="name"></param>
@@ -345,9 +451,7 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
         /// <returns></returns>
         public string GetColumnName(string name, QueryJoinDescriptor descriptor)
         {
-            var col = descriptor.EntityDescriptor.Columns.FirstOrDefault(m => m.PropertyInfo.Name.Equals(name));
-
-            Check.NotNull(col, nameof(col), $"({name})列不存在");
+            var col = GetColumnDescriptor(name, descriptor);
 
             //只有一个实体的时候，不需要别名
             if (JoinDescriptors.Count == 1)
@@ -358,6 +462,127 @@ namespace NetModular.Lib.Data.Core.SqlQueryable.Internal
 
             // ReSharper disable once PossibleNullReferenceException
             return $"{_sqlAdapter.AppendQuote(descriptor.Alias)}.{_sqlAdapter.AppendQuote(col.Name)}";
+        }
+
+        /// <summary>
+        /// 获取列描述信息
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="descriptor"></param>
+        /// <returns></returns>
+        public IColumnDescriptor GetColumnDescriptor(string name, QueryJoinDescriptor descriptor)
+        {
+            var col = descriptor.EntityDescriptor.Columns.FirstOrDefault(m => m.PropertyInfo.Name.Equals(name));
+
+            Check.NotNull(col, nameof(col), $"({name})列不存在");
+
+            return col;
+        }
+
+        /// <summary>
+        /// 解析集合
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="sqlBuilder"></param>
+        /// <param name="list"></param>
+        public void ResolveIEnumerable<T>(StringBuilder sqlBuilder, IEnumerable<T> list)
+        {
+            if (list == null)
+                return;
+
+            var enumerable = list.ToList();
+            var valueType = typeof(T);
+            var isValueType = false;
+            var valueList = new List<string>();
+
+            if (valueType.IsEnum)
+            {
+                isValueType = true;
+                foreach (var c in enumerable)
+                {
+                    valueList.Add(Enum.Parse(valueType, c.ToString()).ToInt().ToString());
+                }
+            }
+            else if (valueType.IsString())
+            {
+                valueList = enumerable as List<string>;
+            }
+            else if (valueType.IsGuid() || valueType.IsChar())
+            {
+                foreach (var c in enumerable)
+                {
+                    valueList.Add(c.ToString());
+                }
+            }
+            else if (valueType.IsDateTime())
+            {
+                if (list is List<DateTime> tmp)
+                {
+                    foreach (var c in tmp)
+                    {
+                        valueList.Add(c.ToString("yyyy-MM-dd HH:mm:ss"));
+                    }
+                }
+            }
+            else if (valueType.IsInt() || valueType.IsLong() || valueType.IsDouble() || valueType.IsFloat() || valueType.IsDecimal())
+            {
+                isValueType = true;
+                foreach (var c in enumerable)
+                {
+                    valueList.Add(c.ToString());
+                }
+            }
+
+            if (valueList == null)
+                return;
+
+            //值类型不带引号
+            if (isValueType)
+            {
+                for (var i = 0; i < valueList.Count; i++)
+                {
+                    sqlBuilder.AppendFormat("{0}", valueList[i]);
+                    if (i != valueList.Count - 1)
+                    {
+                        sqlBuilder.Append(",");
+                    }
+                }
+            }
+            else
+            {
+                for (var i = 0; i < valueList.Count; i++)
+                {
+                    sqlBuilder.AppendFormat("'{0}'", valueList[i].Replace("'", "''"));
+                    if (i != valueList.Count - 1)
+                    {
+                        sqlBuilder.Append(",");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 拷贝
+        /// </summary>
+        /// <returns></returns>
+        public QueryBody Copy()
+        {
+            var copy = new QueryBody(_sqlAdapter)
+            {
+                Uow = Uow,
+                FilterDeleted = FilterDeleted,
+                GroupBy = null,
+                IsGroupBy = IsGroupBy,
+                SetModifiedBy = SetModifiedBy,
+                Skip = Skip,
+                Take = Take,
+                WhereDelegateType = WhereDelegateType
+            };
+
+            copy.Where.AddRange(Where);
+            copy.JoinDescriptors.AddRange(JoinDescriptors);
+            copy.Sorts.AddRange(Sorts);
+            return copy;
         }
 
         #endregion

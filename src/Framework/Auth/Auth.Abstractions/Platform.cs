@@ -18,7 +18,7 @@ namespace NetModular.Lib.Auth.Abstractions
         [Description("Web")]
         Web,
         /// <summary>
-        /// 安卓
+        /// Android
         /// </summary>
         [Description("安卓")]
         Android,
@@ -26,6 +26,31 @@ namespace NetModular.Lib.Auth.Abstractions
         /// IOS
         /// </summary>
         [Description("IOS")]
-        IOS
+        IOS,
+        /// <summary>
+        /// PC
+        /// </summary>
+        [Description("PC")]
+        PC,
+        /// <summary>
+        /// Mobile
+        /// </summary>
+        [Description("手机")]
+        Mobile,
+        /// <summary>
+        /// WeChat
+        /// </summary>
+        [Description("微信")]
+        WeChat,
+        /// <summary>
+        /// 小程序
+        /// </summary>
+        [Description("小程序")]
+        MiniProgram,
+        /// <summary>
+        /// 支付宝
+        /// </summary>
+        [Description("支付宝")]
+        Alipay
     }
 }

@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using NetModular.Lib.Data.Abstractions;
 using NetModular.Lib.Data.Abstractions.Entities;
 using NetModular.Lib.Data.Abstractions.Enums;
 using NetModular.Lib.Data.Abstractions.Options;
 using NetModular.Lib.Data.Core;
-using NetModular.Lib.Utils.Core.Extensions;
 using NetModular.Lib.Utils.Core.Helpers;
 using Npgsql;
 
@@ -15,7 +15,7 @@ namespace NetModular.Lib.Data.PostgreSQL
 {
     internal class PostgreSQLAdapter : SqlAdapterAbstract
     {
-        public PostgreSQLAdapter(DbOptions dbOptions, DbModuleOptions options) : base(dbOptions, options)
+        public PostgreSQLAdapter(DbOptions dbOptions, DbModuleOptions options, ILoggerFactory loggerFactory) : base(dbOptions, options, loggerFactory?.CreateLogger<PostgreSQLAdapter>())
         {
         }
 
@@ -32,12 +32,18 @@ namespace NetModular.Lib.Data.PostgreSQL
 
         public override bool ToLower => true;
 
-        public override string GeneratePagingSql(string select, string table, string where, string sort, int skip, int take)
+        public override string GeneratePagingSql(string select, string table, string where, string sort, int skip, int take, string groupBy = null, string having = null)
         {
             var sqlBuilder = new StringBuilder();
             sqlBuilder.AppendFormat("SELECT {0} FROM {1} ", select, table);
             if (!string.IsNullOrWhiteSpace(where))
                 sqlBuilder.AppendFormat("WHERE {0} ", where);
+
+            if (groupBy.NotNull())
+                sqlBuilder.Append(groupBy);
+
+            if (having.NotNull())
+                sqlBuilder.Append(having);
 
             if (!string.IsNullOrWhiteSpace(sort))
                 sqlBuilder.AppendFormat("ORDER BY {0} ", sort);
@@ -50,9 +56,9 @@ namespace NetModular.Lib.Data.PostgreSQL
             return sqlBuilder.ToString();
         }
 
-        public override string GenerateFirstSql(string select, string table, string where, string sort)
+        public override string GenerateFirstSql(string select, string table, string where, string sort, string groupBy = null, string having = null)
         {
-            return GeneratePagingSql(select, table, where, sort, 0, 1);
+            return GeneratePagingSql(select, table, where, sort, 0, 1, groupBy, having);
         }
 
         public override Guid GenerateSequentialGuid()
@@ -60,7 +66,7 @@ namespace NetModular.Lib.Data.PostgreSQL
             return GuidHelper.NewSequentialGuid(SequentialGuidType.SequentialAsString);
         }
 
-        public override void CreateDatabase(List<IEntityDescriptor> entityDescriptors, IDatabaseCreateEvents events = null)
+        public override void CreateDatabase(List<IEntityDescriptor> entityDescriptors, IDatabaseCreateEvents events, out bool databaseExists)
         {
             var connStrBuilder = new NpgsqlConnectionStringBuilder
             {
@@ -88,16 +94,20 @@ namespace NetModular.Lib.Data.PostgreSQL
 
             using var con = new NpgsqlConnection(connStrBuilder.ToString());
             con.Open();
+            var cmd = con.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.Text;
 
             //判断数据库是否已存在
-            var exist = con.ExecuteScalar($"SELECT 1 FROM pg_namespace WHERE nspname = '{Options.Database}' LIMIT 1;").ToInt() > 0;
-            if (!exist)
+            cmd.CommandText = $"SELECT 1 FROM pg_namespace WHERE nspname = '{Options.Database}' LIMIT 1;";
+            databaseExists = cmd.ExecuteScalar().ToInt() > 0;
+            if (!databaseExists)
             {
                 //执行创建前事件
                 events?.Before().GetAwaiter().GetResult();
 
                 //创建数据库
-                con.Execute($"CREATE SCHEMA {Options.Database};");
+                cmd.CommandText = $"CREATE SCHEMA {Options.Database};";
+                cmd.ExecuteNonQuery();
             }
 
             //创建表
@@ -105,11 +115,14 @@ namespace NetModular.Lib.Data.PostgreSQL
             {
                 if (!entityDescriptor.Ignore)
                 {
-                    con.Execute(CreateTableSql(entityDescriptor));
+                    var sql = GetCreateTableSql(entityDescriptor);
+                    Logger?.LogInformation("执行创建表SQL：{@sql}", sql);
+                    cmd.CommandText = sql;
+                    con.Execute(GetCreateTableSql(entityDescriptor));
                 }
             }
 
-            if (!exist)
+            if (!databaseExists)
             {
                 //执行创建后事件
                 events?.After().GetAwaiter().GetResult();
@@ -118,18 +131,122 @@ namespace NetModular.Lib.Data.PostgreSQL
             con.Close();
         }
 
-        private string CreateTableSql(IEntityDescriptor entityDescriptor)
+        public override string GetColumnTypeName(IColumnDescriptor column, out string defaultValue)
+        {
+            defaultValue = "";
+            var propertyType = column.PropertyInfo.PropertyType;
+            var isNullable = propertyType.IsNullable();
+            if (isNullable)
+            {
+                propertyType = Nullable.GetUnderlyingType(propertyType);
+                if (propertyType == null)
+                    throw new Exception("ResolveColumnTypeName error");
+            }
+
+            if (propertyType.IsEnum)
+            {
+                if (!isNullable)
+                {
+                    defaultValue = "DEFAULT 0";
+                }
+
+                return "SMALLINT";
+            }
+            if (propertyType.IsGuid())
+            {
+                return "UUID";
+            }
+            var typeCode = Type.GetTypeCode(propertyType);
+            switch (typeCode)
+            {
+                case TypeCode.String:
+                    if (column.Max)
+                        return "TEXT";
+
+                    if (column.Length < 1)
+                        return "VARCHAR(50)";
+
+                    return $"VARCHAR({column.Length})";
+                case TypeCode.Char:
+                    column.TypeName = $"CHAR({column.Length})";
+                    break;
+                case TypeCode.Boolean:
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT FALSE";
+                    }
+                    return "boolean";
+                case TypeCode.Byte:
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT 0";
+                    }
+                    return "SMALLINT";
+                case TypeCode.Int16:
+                    if (column.IsPrimaryKey)
+                    {
+                        return "SMALLSERIAL";
+                    }
+
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT 0";
+                    }
+                    return "SMALLINT";
+                case TypeCode.Int32:
+                    if (column.IsPrimaryKey)
+                    {
+                        return "SERIAL";
+                    }
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT 0";
+                    }
+
+                    return "INTEGER";
+                case TypeCode.Int64:
+                    if (column.IsPrimaryKey)
+                    {
+                        return "BIGSERIAL";
+                    }
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT 0";
+                    }
+
+                    return "BIGINT";
+                case TypeCode.DateTime:
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT CURRENT_TIMESTAMP";
+                    }
+
+                    return "TIMESTAMP";
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                case TypeCode.Single:
+                    if (!isNullable)
+                    {
+                        defaultValue = "DEFAULT 0";
+                    }
+                    return "MONEY";
+            }
+
+            return string.Empty;
+        }
+
+        public override string GetCreateTableSql(IEntityDescriptor entityDescriptor, string tableName = null)
         {
             var columns = entityDescriptor.Columns;
             var sql = new StringBuilder();
-            sql.AppendFormat("CREATE TABLE IF NOT EXISTS {0}.{1}(", AppendQuote(Options.Database), AppendQuote(entityDescriptor.TableName.ToLower()));
+            sql.AppendFormat("CREATE TABLE IF NOT EXISTS {0}.{1}(", AppendQuote(Options.Database), AppendQuote(tableName ?? entityDescriptor.TableName.ToLower()));
 
             for (int i = 0; i < columns.Count; i++)
             {
                 var column = columns[i];
 
                 sql.AppendFormat("{0} ", AppendQuote(column.Name.ToLower()));
-                sql.AppendFormat("{0} ", Property2Column(column, out string def));
+                sql.AppendFormat("{0} ", column.TypeName);
 
                 if (column.IsPrimaryKey)
                 {
@@ -141,9 +258,9 @@ namespace NetModular.Lib.Data.PostgreSQL
                     sql.Append("NOT NULL ");
                 }
 
-                if (def.NotNull())
+                if (!column.IsPrimaryKey && column.DefaultValue.NotNull())
                 {
-                    sql.Append(def);
+                    sql.Append(column.DefaultValue);
                 }
 
                 if (i < columns.Count - 1)
@@ -155,136 +272,6 @@ namespace NetModular.Lib.Data.PostgreSQL
             sql.Append(");");
 
             return sql.ToString();
-        }
-
-        /// <summary>
-        /// 属性转换为列
-        /// </summary>
-        /// <param name="column"></param>
-        /// <param name="def"></param>
-        /// <returns></returns>
-        public string Property2Column(IColumnDescriptor column, out string def)
-        {
-            def = "";
-            var propertyType = column.PropertyInfo.PropertyType;
-            var isNullable = propertyType.IsNullable();
-            if (isNullable)
-            {
-                propertyType = Nullable.GetUnderlyingType(propertyType);
-                if (propertyType == null)
-                    throw new Exception("Property2Column error");
-            }
-
-            if (propertyType.IsEnum)
-            {
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-
-                return "SMALLINT";
-            }
-
-            if (propertyType == typeof(Guid))
-                return "UUID";
-
-            var typeCode = Type.GetTypeCode(propertyType);
-            if (typeCode == TypeCode.String)
-            {
-                if (column.Max)
-                    return "TEXT";
-
-                if (column.Length < 1)
-                    return "VARCHAR(50)";
-
-                return $"VARCHAR({column.Length})";
-            }
-
-            if (typeCode == TypeCode.Char)
-            {
-                return $"CHAR({column.Length})";
-            }
-
-            if (typeCode == TypeCode.Boolean)
-            {
-                if (!isNullable)
-                {
-                    def = "DEFAULT FALSE";
-                }
-                return "boolean";
-            }
-
-            if (typeCode == TypeCode.Byte)
-            {
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-                return "SMALLINT";
-            }
-
-            if (typeCode == TypeCode.Int16)
-            {
-                if (column.IsPrimaryKey)
-                {
-                    return "SMALLSERIAL";
-                }
-
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-                return "SMALLINT";
-            }
-
-            if (typeCode == TypeCode.Int32)
-            {
-                if (column.IsPrimaryKey)
-                {
-                    return "SERIAL";
-                }
-
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-                return "INTEGER";
-            }
-
-            if (typeCode == TypeCode.Int64)
-            {
-                if (column.IsPrimaryKey)
-                {
-                    return "BIGSERIAL";
-                }
-
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-                return "BIGINT";
-            }
-
-            if (typeCode == TypeCode.DateTime)
-            {
-                if (!isNullable)
-                {
-                    def = "DEFAULT CURRENT_TIMESTAMP";
-                }
-                return "TIMESTAMP";
-            }
-
-            if (typeCode == TypeCode.Decimal || typeCode == TypeCode.Double || typeCode == TypeCode.Single)
-            {
-                if (!isNullable)
-                {
-                    def = "DEFAULT 0";
-                }
-
-                return "MONEY";
-            }
-
-            return string.Empty;
         }
     }
 }

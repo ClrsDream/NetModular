@@ -1,8 +1,10 @@
-import RoleSelect from '../views/role/components/select'
-
-export default [
-  {
-    name: 'nm-role-select',
-    component: RoleSelect
-  }
-]
+import library from 'netmodular-ui/packages/library'
+let components = []
+const requireComponent = require.context('./', true, /index\.vue$/)
+requireComponent.keys().map(fileName => {
+  components.push({
+    name: `${library.prefix.toLowerCase()}-${fileName.split('/')[1]}`,
+    component: requireComponent(fileName).default
+  })
+})
+export default components
